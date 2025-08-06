@@ -36,7 +36,26 @@ export class HttpClient {
       timeout: config.timeout ?? 30000,
       retries: config.retries ?? 3,
       rateLimit: config.rateLimit ?? { requests: 100, window: 60000 },
+      features: {
+        clockSync: config.features?.clockSync ?? true,
+        websocket: config.features?.websocket ?? true,
+        autoReconnect: config.features?.autoReconnect ?? true,
+      },
+      endpoints: {
+        login: config.endpoints?.login ?? '/login',
+        marketData: config.endpoints?.marketData ?? '/marketdata',
+        time: config.endpoints?.time ?? '/time',
+        account: config.endpoints?.account ?? '/account',
+        wsMarketData: config.endpoints?.wsMarketData ?? '/ws/md',
+        wsPortfolio: config.endpoints?.wsPortfolio ?? '/ws/portfolio',
+      },
+      websocket: config.websocket ?? {
+        marketDataPath: '/md',
+        portfolioPath: '/?format=JSON',
+      },
     };
+    
+    console.log('HttpClient initialized with baseUrl:', this.config.baseUrl);
 
     this.rateLimiter = new RateLimiter(
       this.config.rateLimit.requests,
@@ -60,8 +79,8 @@ export class HttpClient {
     // Check rate limiting
     await this.rateLimiter.consume();
 
-    // Sync clock if needed
-    if (this.clockSync.needsSync()) {
+    // Sync clock if enabled and needed
+    if (this.config.features.clockSync && this.clockSync.needsSync()) {
       await this.syncClock();
     }
 
@@ -193,7 +212,7 @@ export class HttpClient {
    */
   async syncClock(): Promise<void> {
     await this.clockSync.sync(async () => {
-      const response = await this.makeRawRequest('/time', 'GET');
+      const response = await this.makeRawRequest(this.config.endpoints.time, 'GET');
       const data = (await response.json()) as { timestamp: number };
       return data.timestamp;
     });
@@ -212,6 +231,13 @@ export class HttpClient {
   clearSessionToken(): void {
     this.sessionToken = undefined;
   }
+  
+  /**
+   * Get current session token
+   */
+  getSessionToken(): string | undefined {
+    return this.sessionToken;
+  }
 
   /**
    * Make the actual HTTP request
@@ -220,7 +246,11 @@ export class HttpClient {
     config: RequestConfig,
     idempotencyKey: string
   ): Promise<ApiResponse<T>> {
-    const url = new URL(config.url, this.config.baseUrl);
+    // Ensure the path is appended correctly to baseUrl
+    const fullUrl = config.url.startsWith('http') 
+      ? config.url 
+      : `${this.config.baseUrl}${config.url.startsWith('/') ? config.url : '/' + config.url}`;
+    const url = new URL(fullUrl);
     
     // Add query parameters
     if (config.params) {
@@ -275,16 +305,37 @@ export class HttpClient {
    */
   private async makeRawRequest(
     path: string,
-    method: HTTPMethod = 'GET'
+    method: HTTPMethod = 'GET',
+    body?: unknown
   ): Promise<Response> {
-    const url = new URL(path, this.config.baseUrl);
+    // Ensure the path is appended correctly to baseUrl
+    const fullUrl = path.startsWith('http') 
+      ? path 
+      : `${this.config.baseUrl}${path.startsWith('/') ? path : '/' + path}`;
     
-    const response = await fetch(url.toString(), {
+    console.log(`Making request to: ${fullUrl}`);
+    
+    const options: RequestInit = {
       method,
       signal: AbortSignal.timeout(this.config.timeout),
-    });
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'User-Agent': 'TradingDashboard/1.0',
+      },
+    };
+    
+    if (body) {
+      options.body = JSON.stringify(body);
+      console.log('Request body:', options.body);
+    }
+    
+    const response = await fetch(fullUrl, options);
+    console.log(`Response status: ${response.status}`);
 
     if (!response.ok) {
+      const text = await response.text();
+      console.log('Error response:', text.substring(0, 500));
       throw new NetworkError(`HTTP ${response.status}: ${response.statusText}`, {
         statusCode: response.status,
       });
@@ -387,12 +438,12 @@ export class HttpClient {
         break;
 
       case 'credentials':
-        // Credentials auth typically requires initial login request
+        // After login, use sessionToken for all requests
         if (this.sessionToken) {
-          headers['Authorization'] = `Session ${this.sessionToken}`;
-        } else {
-          throw new AuthError('Session token required for credentials auth');
+          headers['X-Auth-Token'] = this.sessionToken;
+          headers['Authorization'] = `DXAPI ${this.sessionToken}`;
         }
+        // Don't throw error if no session token - might be logging in
         break;
     }
   }
@@ -446,14 +497,28 @@ export class HttpClient {
     const loginData = {
       username: auth.username,
       password: auth.password,
-      domain: auth.domain,
+      domain: auth.domain || 'default',
     };
 
     try {
-      const response = await this.makeRawRequest('/auth/login', 'POST');
-      const data = (await response.json()) as { token: string };
+      // Use explicit login URL if available, otherwise fall back to endpoint path
+      const loginUrl = this.config.urls?.login || this.config.endpoints.login;
+      console.log(`Request body: ${JSON.stringify(loginData)}`);
       
-      this.sessionToken = data.token;
+      const response = await this.makeRawRequest(loginUrl, 'POST', loginData);
+      const data = (await response.json()) as { 
+        sessionToken: string;
+        timeout?: number;
+        accounts?: unknown[];
+        expiresIn?: number;
+      };
+      
+      if (!data.sessionToken) {
+        throw new Error('No sessionToken in login response');
+      }
+      
+      this.sessionToken = data.sessionToken;
+      console.log('Login successful, session token received:', this.sessionToken.substring(0, 20) + '...');
     } catch (error) {
       throw new AuthError('Failed to authenticate with credentials', {
         cause: error as Error,
@@ -466,8 +531,8 @@ export class HttpClient {
    */
   private getDefaultBaseUrl(environment: 'demo' | 'live'): string {
     return environment === 'demo' 
-      ? 'https://demo-api.dx.trade/api/v1'
-      : 'https://api.dx.trade/api/v1';
+      ? 'https://demo-api.dx.trade/dxsca-web'
+      : 'https://api.dxtrade.com/v1';
   }
 
   /**

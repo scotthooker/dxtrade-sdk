@@ -1,9 +1,8 @@
 import { EventEmitter } from 'events';
 import { z } from 'zod';
 import { ConnectionManager } from './connection-manager.js';
-import { WebSocketError, AuthError } from '../errors/index.js';
+import { AuthError } from '../errors/index.js';
 import type {
-  WebSocketConfig,
   WebSocketEventMap,
   SubscriptionType,
   WebSocketMessage,
@@ -14,7 +13,6 @@ import type {
   PositionUpdateMessage,
   AccountUpdateMessage,
 } from '../types/websocket.js';
-import type { AuthConfig } from '../types/common.js';
 
 /**
  * Market data subscription configuration
@@ -70,29 +68,29 @@ export const PushClientConfigSchema = z.object({
 export type PushClientConfig = z.infer<typeof PushClientConfigSchema>;
 
 /**
- * Market data events
+ * Market data events - parameter tuple format
  */
 interface MarketDataEvents {
-  quote: (data: QuoteUpdateMessage['data']) => void;
-  orderbook: (data: OrderBookUpdateMessage['data']) => void;
-  trade: (data: TradeUpdateMessage['data']) => void;
+  quote: [data: QuoteUpdateMessage['data']];
+  orderbook: [data: OrderBookUpdateMessage['data']];
+  trade: [data: TradeUpdateMessage['data']];
 }
 
 /**
- * Account events
+ * Account events - parameter tuple format
  */
 interface AccountEvents {
-  order: (data: OrderUpdateMessage['data']) => void;
-  position: (data: PositionUpdateMessage['data']) => void;
-  account: (data: AccountUpdateMessage['data']) => void;
+  order: [data: OrderUpdateMessage['data']];
+  position: [data: PositionUpdateMessage['data']];
+  account: [data: AccountUpdateMessage['data']];
 }
 
 /**
- * Combined event map
+ * Combined event map - parameter tuple format
  */
 interface PushClientEventMap extends WebSocketEventMap, MarketDataEvents, AccountEvents {
-  authenticated: () => void;
-  backfillComplete: (channel: SubscriptionType, items: number) => void;
+  authenticated: [];
+  backfillComplete: [channel: SubscriptionType, items: number];
 }
 
 /**
@@ -585,7 +583,7 @@ export class PushClient extends EventEmitter<PushClientEventMap> {
       if (buffer.length > 0) {
         // Emit batched updates
         for (const data of buffer) {
-          this.emit(type as keyof PushClientEventMap, data);
+          this.emit(type as keyof PushClientEventMap, data as any);
         }
         
         // Clear buffer

@@ -1,6 +1,6 @@
 /**
  * DXtrade TypeScript SDK
- * 
+ *
  * A production-ready SDK for DXtrade REST and WebSocket APIs with:
  * - Comprehensive TypeScript typing
  * - Exponential backoff and retry logic
@@ -10,7 +10,7 @@
  * - Automatic reconnection
  * - Comprehensive error handling
  */
-
+import 'dotenv/config'; // ES modules
 // Main client
 export {
   DXTradeClient,
@@ -20,6 +20,9 @@ export {
   createRestOnlyClient,
   type DXTradeClientConfig,
 } from './client.js';
+
+// Configuration helpers
+export { loadConfigFromEnv, createConfigWithEnv, getWebSocketUrl } from './config/env-config.js';
 
 // Core HTTP client
 export { HttpClient } from './core/http-client.js';
@@ -33,6 +36,7 @@ export { PositionsApi } from './rest/positions.js';
 // WebSocket client
 export { PushClient } from './websocket/push-client.js';
 export { ConnectionManager } from './websocket/connection-manager.js';
+export { DXTradeStreamManager, createDXTradeStreamManager } from './websocket/dxtrade-stream-manager.js';
 
 // Type definitions
 export type {
@@ -90,6 +94,28 @@ export type {
   AccountUpdateMessage,
   SubscriptionState,
 } from './types/websocket.js';
+
+// DXTrade-specific WebSocket types
+export type {
+  DXTradeMessageType,
+  DXTradeWebSocketMessage,
+  DXTradeWebSocketConfig,
+  DXTradeStreamOptions,
+  DXTradeStreamCallbacks,
+  DXTradeConnectionStatus,
+  DXTradeTestResult,
+  PingRequestMessage,
+  PingResponseMessage,
+  MarketDataSubscriptionRequest,
+  AccountPortfoliosSubscriptionRequest,
+  MarketDataMessage,
+  AccountPortfoliosMessage,
+  PositionUpdateMessage as DXTradePositionUpdateMessage,
+  OrderUpdateMessage as DXTradeOrderUpdateMessage,
+  SubscriptionResponseMessage,
+  ErrorResponseMessage,
+  AuthenticationResponseMessage,
+} from './types/dxtrade-messages.js';
 
 // REST API specific types
 export type {
@@ -163,11 +189,7 @@ export {
   CircuitBreaker,
   retryWithBackoff,
 } from './utils/backoff.js';
-export {
-  ClockSynchronizer,
-  TimestampGenerator,
-  TimestampUtils,
-} from './utils/clock-sync.js';
+export { ClockSynchronizer, TimestampGenerator, TimestampUtils } from './utils/clock-sync.js';
 
 // Version information
 export const VERSION = '1.0.0';
@@ -186,7 +208,4 @@ export const SDK_INFO = {
   },
 } as const;
 
-/**
- * Default export for convenience
- */
-export default DXTradeClient;
+// Note: DXTradeClient is exported from client.js above

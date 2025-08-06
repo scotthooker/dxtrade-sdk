@@ -5,7 +5,7 @@ import type { RateLimiterState } from '../types/common.js';
  * Token bucket rate limiter implementation
  */
 export class RateLimiter {
-  private readonly requests: number;
+  public readonly requests: number;
   private readonly windowMs: number;
   private readonly timestamps: number[] = [];
   private retryAfter?: number;

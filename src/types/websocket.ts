@@ -264,16 +264,16 @@ export const SubscriptionStateSchema = z.object({
 export type SubscriptionState = z.infer<typeof SubscriptionStateSchema>;
 
 /**
- * WebSocket event types
+ * WebSocket event types - parameter tuple format for EventEmitter
  */
 export type WebSocketEventMap = {
-  open: () => void;
-  close: (code: number, reason: string) => void;
-  error: (error: Error) => void;
-  message: (message: WebSocketMessage) => void;
-  reconnecting: (attempt: number) => void;
-  reconnected: () => void;
-  subscribed: (channel: SubscriptionType, symbols: string[]) => void;
-  unsubscribed: (channel: SubscriptionType, symbols: string[]) => void;
-  heartbeat: (timestamp: number) => void;
+  open: [];
+  close: [code: number, reason: string];
+  error: [error: Error];
+  message: [message: WebSocketMessage];
+  reconnecting: [attempt: number];
+  reconnected: [];
+  subscribed: [channel: SubscriptionType, symbols: string[]];
+  unsubscribed: [channel: SubscriptionType, symbols: string[]];
+  heartbeat: [timestamp: number];
 };

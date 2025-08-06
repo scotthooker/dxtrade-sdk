@@ -113,7 +113,7 @@ export class PositionsApi {
   /**
    * Get all positions with optional filtering
    */
-  async getPositions(query: PositionQuery = {}): Promise<{
+  async getPositions(query: PositionQuery = { limit: 100 }): Promise<{
     positions: Position[];
     pagination?: {
       page: number;
@@ -184,6 +184,7 @@ export class PositionsApi {
     const result = await this.getPositions({
       accountId,
       symbol,
+      limit: 100,
     });
     
     return result.positions;
@@ -193,7 +194,7 @@ export class PositionsApi {
    * Get open positions only
    */
   async getOpenPositions(accountId?: string): Promise<Position[]> {
-    const result = await this.getPositions({ accountId });
+    const result = await this.getPositions({ accountId, limit: 100 });
     
     // Filter positions with non-zero size
     return result.positions.filter(position => position.size !== 0);
@@ -221,7 +222,7 @@ export class PositionsApi {
       throw new TradingError(
         response.message ?? 'Failed to modify position',
         {
-          details: response.errors,
+          details: { errors: response.errors },
         }
       );
     }
@@ -259,7 +260,7 @@ export class PositionsApi {
       throw new TradingError(
         response.message ?? 'Failed to close position',
         {
-          details: response.errors,
+          details: { errors: response.errors },
         }
       );
     }
@@ -306,7 +307,7 @@ export class PositionsApi {
       throw new TradingError(
         response.message ?? 'Failed to close positions',
         {
-          details: response.errors,
+          details: { errors: response.errors },
         }
       );
     }
@@ -360,7 +361,7 @@ export class PositionsApi {
         response.message ?? 'Failed to close all positions',
         {
           symbol: options.symbol,
-          details: response.errors,
+          details: { errors: response.errors },
         }
       );
     }

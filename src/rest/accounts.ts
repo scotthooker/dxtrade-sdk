@@ -1,6 +1,6 @@
 import type { HttpClient } from '../core/http-client.js';
 import type { Account } from '../types/trading.js';
-import type { ApiResponse, PaginatedResponseSchema } from '../types/common.js';
+import type { ApiResponse } from '../types/common.js';
 import { AccountSchema } from '../types/trading.js';
 import { z } from 'zod';
 
@@ -335,5 +335,12 @@ export class AccountsApi {
     }).parse(response.data);
 
     return validatedData;
+  }
+
+  /**
+   * Get account information - simplified for DXtrade API
+   */
+  async getInfo(): Promise<ApiResponse<Account>> {
+    return this.httpClient.get<Account>('/accounts');
   }
 }

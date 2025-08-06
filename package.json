@@ -1,6 +1,6 @@
 {
   "name": "dxtrade-sdk",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Production-ready TypeScript SDK for DXtrade REST and WebSocket APIs",
   "type": "module",
   "main": "dist/index.js",
@@ -35,7 +35,13 @@
     "format:check": "prettier --check src/**/*.{ts,tsx}",
     "docs": "typedoc src/index.ts",
     "docs:serve": "typedoc src/index.ts --watch",
-    "prepublishOnly": "npm run lint && npm run test && npm run build"
+    "prepublishOnly": "npm run lint && npm run build",
+    "example:config": "tsx examples/test-env-config.ts",
+    "example:discover": "tsx examples/discover-endpoints.ts",
+    "example:data-reception": "tsx examples/test-data-reception.ts",
+    "example:dxtrade-stream": "tsx examples/dxtrade-stream-example.ts",
+    "example:stream-test": "tsx examples/test-dxtrade-stream.ts",
+    "example:websocket-5min": "tsx examples/test-websocket-5min.ts"
   },
   "keywords": [
     "dxtrade",
@@ -44,11 +50,23 @@
     "rest-api",
     "typescript",
     "sdk",
-    "financial"
+    "financial",
+    "market-data",
+    "real-time",
+    "api-client"
   ],
-  "author": "DXtrade SDK Team",
+  "author": "Scott Hooker <scott@scotthooker.dev>",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/scotthooker/dxtrade-sdk.git"
+  },
+  "bugs": {
+    "url": "https://github.com/scotthooker/dxtrade-sdk/issues"
+  },
+  "homepage": "https://github.com/scotthooker/dxtrade-sdk#readme",
   "license": "MIT",
   "dependencies": {
+    "dotenv": "^17.2.1",
     "ws": "^8.18.0",
     "zod": "^3.22.4"
   },
@@ -63,7 +81,7 @@
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-prettier": "^5.1.3",
     "prettier": "^3.2.5",
-    "tsx": "^4.7.1",
+    "tsx": "^4.20.3",
     "typedoc": "^0.25.8",
     "typescript": "^5.3.3",
     "vite": "^7.0.6",

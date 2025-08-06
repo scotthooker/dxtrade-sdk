@@ -3,9 +3,6 @@ import type {
   Order,
   OrderRequest,
   OrderSide,
-  OrderType,
-  OrderStatus,
-  TimeInForce,
 } from '../types/trading.js';
 import { OrderSchema, OrderRequestSchema } from '../types/trading.js';
 import { TradingError } from '../errors/index.js';
@@ -133,7 +130,7 @@ export class OrdersApi {
         response.message ?? 'Failed to place order',
         {
           symbol: request.symbol,
-          details: response.errors,
+          details: { errors: response.errors },
         }
       );
     }
@@ -169,7 +166,7 @@ export class OrdersApi {
         response.message ?? 'Failed to place OCO order',
         {
           symbol: request.symbol,
-          details: response.errors,
+          details: { errors: response.errors },
         }
       );
     }
@@ -212,7 +209,7 @@ export class OrdersApi {
         response.message ?? 'Failed to place bracket order',
         {
           symbol: request.symbol,
-          details: response.errors,
+          details: { errors: response.errors },
         }
       );
     }
@@ -248,7 +245,7 @@ export class OrdersApi {
   /**
    * Get orders with optional filtering
    */
-  async getOrders(query: OrderQuery = {}): Promise<{
+  async getOrders(query: OrderQuery = { limit: 100 }): Promise<{
     orders: Order[];
     pagination?: {
       page: number;
@@ -300,6 +297,7 @@ export class OrdersApi {
     const result = await this.getOrders({
       accountId,
       status: 'PENDING',
+      limit: 100,
     });
     
     return result.orders;
@@ -329,6 +327,7 @@ export class OrdersApi {
     return this.getOrders({
       ...options,
       status: 'FILLED',
+      limit: options.limit ?? 100,
     });
   }
 
@@ -352,7 +351,7 @@ export class OrdersApi {
         response.message ?? 'Failed to modify order',
         {
           orderRef: modification.orderId,
-          details: response.errors,
+          details: { errors: response.errors },
         }
       );
     }
@@ -379,7 +378,7 @@ export class OrdersApi {
         response.message ?? 'Failed to cancel order',
         {
           orderRef: orderId,
-          details: response.errors,
+          details: { errors: response.errors },
         }
       );
     }
@@ -420,7 +419,7 @@ export class OrdersApi {
       throw new TradingError(
         response.message ?? 'Failed to cancel orders',
         {
-          details: response.errors,
+          details: { errors: response.errors },
         }
       );
     }
@@ -471,7 +470,7 @@ export class OrdersApi {
         response.message ?? 'Failed to cancel all orders',
         {
           symbol: options.symbol,
-          details: response.errors,
+          details: { errors: response.errors },
         }
       );
     }

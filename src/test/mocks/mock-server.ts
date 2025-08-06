@@ -245,7 +245,7 @@ export class MockWebSocketServer extends EventEmitter {
       if (token && typeof token === 'string' && token.length > 0) {
         this.sendToClient(client, {
           type: 'AUTH',
-          data: { success: true },
+          data: { token: token },
           timestamp: Date.now(),
         });
         this.emit('authenticated', client);

@@ -2,7 +2,7 @@
  * Base error class for all DXtrade SDK errors
  */
 export abstract class DXError extends Error {
-  public readonly name: string;
+  public override readonly name: string;
   public readonly timestamp: number;
   public readonly code?: string;
   public readonly details?: Record<string, unknown>;

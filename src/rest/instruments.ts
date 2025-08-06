@@ -106,7 +106,7 @@ export class InstrumentsApi {
   /**
    * Get all available instruments with optional filtering
    */
-  async getInstruments(filter: InstrumentFilter = {}): Promise<{
+  async getInstruments(filter: InstrumentFilter = { limit: 100 }): Promise<{
     instruments: Instrument[];
     pagination?: {
       page: number;
@@ -318,7 +318,7 @@ export class InstrumentsApi {
    * Get instruments by type
    */
   async getInstrumentsByType(type: InstrumentType): Promise<Instrument[]> {
-    return this.getInstruments({ type }).then(result => result.instruments);
+    return this.getInstruments({ type, limit: 100 }).then(result => result.instruments);
   }
 
   /**

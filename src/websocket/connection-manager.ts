@@ -1,6 +1,5 @@
 import { EventEmitter } from 'events';
 import WebSocket from 'ws';
-import { z } from 'zod';
 import { ExponentialBackoff } from '../utils/backoff.js';
 import { WebSocketError, TimeoutError } from '../errors/index.js';
 import type {
@@ -421,7 +420,6 @@ export class ConnectionManager extends EventEmitter<WebSocketEventMap> {
   private handleErrorMessage(message: WebSocketMessage): void {
     if (message.type === 'ERROR') {
       const error = new WebSocketError(message.data.message, {
-        code: message.data.code.toString(),
         details: message.data.details,
       });
       
@@ -618,7 +616,6 @@ export class ConnectionManager extends EventEmitter<WebSocketEventMap> {
    */
   private setState(newState: ConnectionState): void {
     if (this.state !== newState) {
-      const previousState = this.state;
       this.state = ConnectionStateSchema.parse(newState);
       
       // Emit state-specific events

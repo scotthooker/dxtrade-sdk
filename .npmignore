@@ -1,0 +1,80 @@
+# Source and development files
+src/
+*.ts
+*.tsx
+!*.d.ts
+
+# Configuration files
+.env
+.env.*
+!.env.example
+.claude/
+.vscode/
+.idea/
+
+# Test and example files
+examples/
+tests/
+test/
+__tests__/
+*.test.js
+*.test.ts
+*.spec.js
+*.spec.ts
+
+# Build artifacts
+node_modules/
+coverage/
+.nyc_output/
+*.tsbuildinfo
+
+# Documentation source
+docs/
+*.md
+!README.md
+
+# Git and CI files
+.git/
+.github/
+.gitignore
+.gitattributes
+
+# Development tools
+.eslintrc*
+.prettierrc*
+.editorconfig
+jest.config.*
+tsconfig.json
+rollup.config.*
+webpack.config.*
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE files
+*.swp
+*.swo
+*~
+
+# Package manager
+.yarn-integrity
+.pnp.*
+
+# Temporary files
+tmp/
+temp/
+.tmp
+.temp

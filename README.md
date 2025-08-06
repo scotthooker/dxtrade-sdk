@@ -1,16 +1,31 @@
-# DXtrade TypeScript SDK
+# DXTrade TypeScript SDK
 
 [![npm version](https://badge.fury.io/js/dxtrade-sdk.svg)](https://badge.fury.io/js/dxtrade-sdk)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue.svg)](https://www.typescriptlang.org/)
 [![Node.js](https://img.shields.io/badge/Node.js-20+-green.svg)](https://nodejs.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Coverage](https://img.shields.io/badge/Coverage-90%25+-brightgreen.svg)]()
+[![Build Status](https://img.shields.io/badge/Build-Passing-brightgreen.svg)]()
 
-A production-ready TypeScript SDK for DXtrade's REST and WebSocket APIs with comprehensive typing, robust connection management, and enterprise-grade reliability features.
+A production-ready, enterprise-grade TypeScript SDK for DXTrade REST and WebSocket APIs. Features comprehensive TypeScript typing, battle-tested WebSocket dual-connection architecture, automatic ping/pong handling, and robust error recovery patterns.
+
+## Table of Contents
+
+- [✨ Features](#-features)
+- [🚀 Quick Start](#-quick-start)
+- [📖 Configuration](#-configuration)
+- [🔐 Authentication](#-authentication)
+- [📊 DXTrade Real-time Streaming](#-dxtrade-real-time-streaming)
+- [📚 API Reference](#-api-reference)
+- [🛠️ Advanced Features](#️-advanced-features)
+- [🧪 Testing](#-testing)
+- [📝 Examples](#-examples)
+- [🤝 Contributing](#-contributing)
+- [📄 License](#-license)
 
 ## ✨ Features
 
 ### 🏗️ **Enterprise Architecture**
+- **Platform Agnostic**: Works with any DXtrade broker through configuration
 - **Strict TypeScript**: No `any` types, comprehensive interfaces
 - **ESM First**: Modern ES modules with Node.js 20+ support
 - **Robust Error Handling**: Comprehensive error taxonomy with detailed context
@@ -20,23 +35,32 @@ A production-ready TypeScript SDK for DXtrade's REST and WebSocket APIs with com
 - **Exponential Backoff**: Full jitter retry logic for optimal performance
 - **Rate Limiting**: Smart rate limiting with Retry-After header support
 - **Circuit Breaker**: Prevents cascading failures
-- **Clock Synchronization**: Handles server time drift automatically
+- **Clock Synchronization**: Handles server time drift automatically (configurable)
 - **Idempotency**: Built-in idempotency key support for safe retries
 
-### 🌐 **WebSocket Excellence**
-- **State Machine**: Robust connection state management (idle → connecting → open → closing → closed)
-- **Auto-Reconnection**: Intelligent reconnection with exponential backoff
-- **Automatic Resubscription**: Seamless resubscription after reconnection
-- **Heartbeat Management**: Built-in ping/pong with timeout detection
-- **Backpressure Handling**: Bounded message queues prevent memory leaks
+### 🌐 **DXTrade WebSocket Excellence**
+- **Dual WebSocket Architecture**: Dedicated market data and portfolio connections
+- **Automatic Ping/Pong**: Server ping request handling for connection stability
+- **Battle-Tested Patterns**: Based on proven 5-minute stability test implementation
+- **Intelligent Reconnection**: Exponential backoff with configurable retry limits
+- **Connection Health Monitoring**: Real-time status and message statistics
+- **Seamless Message Handling**: Type-safe parsing of all DXTrade message formats
+- **Built-in Stability Testing**: Comprehensive connection validation tools
 
 ### 📊 **Comprehensive API Coverage**
-- **Authentication**: Bearer token, HMAC, session-based (pluggable)
+- **Authentication**: Credentials, session token, bearer token, HMAC
 - **Accounts & Balances**: Full account management and balance tracking
 - **Instruments & Prices**: Metadata, quotes, streaming market data
 - **Orders**: Place, modify, cancel orders (including OCO, bracket orders)
 - **Positions**: Position management with risk metrics
 - **Real-time Streaming**: Live quotes, order book, trade executions
+
+### 🔧 **Broker Configuration**
+- **Environment Variables**: Configure any broker without code changes
+- **Feature Flags**: Enable/disable features based on broker capabilities
+- **Custom Endpoints**: Override default API paths
+- **WebSocket Paths**: Configure market data and portfolio WebSocket paths
+- **Rate Limiting**: Broker-specific rate limit configuration
 
 ## 🚀 Quick Start
 
@@ -46,16 +70,48 @@ A production-ready TypeScript SDK for DXtrade's REST and WebSocket APIs with com
 npm install dxtrade-sdk
 ```
 
+### Environment Configuration
+
+Configure your broker using environment variables. The SDK supports two approaches:
+
+#### Explicit URLs (Recommended)
+
+```bash
+# Authentication
+DXTRADE_USERNAME=your_username
+DXTRADE_PASSWORD=your_password
+
+# Explicit URLs (no concatenation issues)
+DXTRADE_LOGIN_URL=https://your-broker.com/api/login
+DXTRADE_ACCOUNTS_URL=https://your-broker.com/api/accounts
+DXTRADE_WS_MARKET_DATA_URL=wss://your-broker.com/ws/md?format=JSON
+DXTRADE_WS_PORTFOLIO_URL=wss://your-broker.com/ws/?format=JSON
+
+# Optional
+DXTRADE_DOMAIN=default
+DXTRADE_FEATURE_WEBSOCKET=true
+```
+
+#### Legacy Base URLs (Backward Compatible)
+
+```bash
+# Required
+DXTRADE_API_URL=https://api.your-broker.com/api
+DXTRADE_USERNAME=your_username
+DXTRADE_PASSWORD=your_password
+
+# Optional
+DXTRADE_WS_URL=wss://ws.your-broker.com/ws
+```
+
 ### Basic Usage
 
 ```typescript
-import { createDemoClient } from 'dxtrade-sdk';
+import { createConfigWithEnv, DXTradeClient } from 'dxtrade-sdk';
 
-// Create demo client with bearer token
-const client = createDemoClient({
-  type: 'bearer',
-  token: 'your-api-token',
-});
+// Load configuration from environment
+const config = createConfigWithEnv();
+const client = new DXTradeClient(config);
 
 // Connect to APIs
 await client.connect();
@@ -64,627 +120,864 @@ await client.connect();
 const accounts = await client.accounts.getAccounts();
 console.log('Accounts:', accounts);
 
-// Get real-time quotes
-if (client.push) {
-  client.push.on('quote', (quote) => {
-    console.log(`${quote.symbol}: ${quote.bid}/${quote.ask}`);
-  });
-  
-  client.push.subscribeToQuotes(['EURUSD', 'GBPUSD']);
-}
+// REST API: Get market data
+const instruments = await client.instruments.getInstruments();
+console.log('Available instruments:', instruments);
+
+// DXTrade WebSocket Streaming (Recommended)
+const streamManager = await client.startDXTradeStream({
+  symbols: ['EUR/USD', 'GBP/USD', 'XAU/USD'],
+  enableMarketData: true,
+  enablePortfolio: true,
+  enablePingResponse: true, // Automatic ping/pong handling
+}, {
+  onMarketData: (data) => {
+    console.log('Market Data:', data.payload);
+  },
+  onAccountPortfolios: (data) => {
+    console.log('Portfolio Update:', data.payload);
+  },
+  onPingRequest: (data) => {
+    console.log('Server ping handled automatically');
+  },
+  onConnected: (connectionType) => {
+    console.log(`${connectionType} WebSocket connected`);
+  },
+});
+
+// Monitor connection health
+const status = streamManager.getStatus();
+console.log('Stream Status:', {
+  marketDataConnected: status.marketData.connected,
+  portfolioConnected: status.portfolio.connected,
+  totalMessages: status.marketData.messageCount + status.portfolio.messageCount,
+  pingStats: status.pingStats,
+});
 
 // Place a market order
 const order = await client.orders.placeOrder({
-  symbol: 'EURUSD',
+  symbol: 'EUR/USD',
   side: 'BUY',
   type: 'MARKET',
-  quantity: 1.0,
+  quantity: 1000, // 1000 units
 });
 
 console.log('Order placed:', order);
 
 // Cleanup
+await streamManager.disconnect();
 await client.disconnect();
-client.destroy();
 ```
 
-## 📖 API Documentation
+## 📖 Configuration
 
-### Authentication
+### Explicit URL Configuration (Recommended)
+
+The SDK supports explicit URL configuration for maximum reliability:
+
+#### Why Explicit URLs?
+
+- ✅ **No concatenation errors**: Each URL is complete and exact
+- ✅ **Flexible routing**: Different endpoints can use different domains/ports
+- ✅ **Clear configuration**: You see exactly what URLs are being used
+- ✅ **Better debugging**: Know exact URLs in logs and errors
+- ✅ **Production ready**: Reliable for load balancing and microservices
+
+#### Complete .env Configuration
+
+```bash
+# Authentication
+DXTRADE_USERNAME=your_username
+DXTRADE_PASSWORD=your_password
+DXTRADE_DOMAIN=default
+DXTRADE_ACCOUNT=default:dealtest
+
+# Environment
+DXTRADE_ENVIRONMENT=live
+
+# Explicit API URLs (recommended)
+DXTRADE_LOGIN_URL=https://your-broker.com/api/login
+DXTRADE_LOGOUT_URL=https://your-broker.com/api/logout
+DXTRADE_ACCOUNTS_URL=https://your-broker.com/api/accounts
+DXTRADE_ACCOUNTS_METRICS_URL=https://your-broker.com/api/accounts/metrics
+DXTRADE_ACCOUNTS_POSITIONS_URL=https://your-broker.com/api/accounts/positions
+DXTRADE_ACCOUNTS_ORDERS_URL=https://your-broker.com/api/accounts/orders
+DXTRADE_ACCOUNTS_ORDERS_HISTORY_URL=https://your-broker.com/api/accounts/orders/history
+DXTRADE_INSTRUMENTS_QUERY_URL=https://your-broker.com/api/instruments/query
+DXTRADE_CONVERSION_RATES_URL=https://your-broker.com/api/conversionRates
+DXTRADE_TIME_URL=https://your-broker.com/api/time
+
+# Explicit WebSocket URLs
+DXTRADE_WS_MARKET_DATA_URL=wss://your-broker.com/ws/md?format=JSON
+DXTRADE_WS_PORTFOLIO_URL=wss://your-broker.com/ws/?format=JSON
+
+# Optional Features
+DXTRADE_FEATURE_CLOCK_SYNC=true
+DXTRADE_FEATURE_WEBSOCKET=true
+DXTRADE_FEATURE_AUTO_RECONNECT=true
+DXTRADE_FEATURE_RATE_LIMITING=true
+DXTRADE_FEATURE_AUTOMATIC_RETRY=true
+
+# WebSocket Configuration
+DXTRADE_WS_FORMAT=JSON
+DXTRADE_WS_PING_INTERVAL=45
+DXTRADE_WS_RECONNECT_ATTEMPTS=5
+DXTRADE_WS_RECONNECT_DELAY=1.0
+
+# Rate Limiting Configuration
+DXTRADE_RATE_LIMIT_ENABLED=true
+DXTRADE_RATE_LIMIT_PER_SECOND=10
+DXTRADE_RATE_LIMIT_PER_MINUTE=100
+DXTRADE_RATE_LIMIT_BURST_SIZE=20
+
+# Retry Configuration
+DXTRADE_RETRY_ENABLED=true
+DXTRADE_RETRY_MAX_ATTEMPTS=3
+DXTRADE_RETRY_BASE_DELAY=0.5
+DXTRADE_RETRY_MAX_DELAY=30.0
+DXTRADE_RETRY_JITTER=true
+
+# Logging Configuration
+DXTRADE_LOG_LEVEL=INFO
+DXTRADE_LOG_REQUESTS=false
+DXTRADE_LOG_RESPONSES=false
+```
+
+### Environment Variables Reference
+
+#### Core Configuration
+
+| Variable | Description | Default | Required |
+|----------|-------------|---------|----------|
+| `DXTRADE_ENVIRONMENT` | Trading environment (`demo` or `live`) | `demo` | No |
+| `DXTRADE_BASE_URL` | Base URL for the broker's API | Auto-detected | No |
+| `DXTRADE_TIMEOUT` | Request timeout in milliseconds | `30000` | No |
+| `DXTRADE_RETRIES` | Number of retry attempts | `3` | No |
+
+#### Authentication Variables
+
+| Variable | Description | Required |
+|----------|-------------|----------|
+| `DXTRADE_USERNAME` | Trading account username | Yes |
+| `DXTRADE_PASSWORD` | Trading account password | Yes |
+| `DXTRADE_DOMAIN` | Account domain | No (default: `default`) |
+| `DXTRADE_SESSION_TOKEN` | Pre-authenticated session token | Alternative |
+| `DXTRADE_BEARER_TOKEN` | Bearer authentication token | Alternative |
+| `DXTRADE_API_KEY` | API key for HMAC auth | Alternative |
+| `DXTRADE_API_SECRET` | API secret for HMAC auth | Alternative |
+
+### Discovering Broker Endpoints
+
+Use the discovery tool to find your broker's endpoints:
+
+```bash
+export DXTRADE_BASE_URL=https://your-broker.com/api
+export DXTRADE_USERNAME=your_username
+export DXTRADE_PASSWORD=your_password
+
+npm run discover:endpoints
+```
+
+### Testing Configuration
+
+Test your broker configuration:
+
+```bash
+# Test general environment configuration
+npm run test:env-config
+
+# Test explicit URL configuration
+npm run test:explicit-urls
+
+# Test data reception
+npm run test:data-reception
+```
+
+## 🔐 Authentication
 
 The SDK supports multiple authentication methods:
 
-#### Bearer Token Authentication
+### Credentials Authentication
+
 ```typescript
-const client = createDemoClient({
-  type: 'bearer',
-  token: 'your-bearer-token',
+const config = {
+  auth: {
+    type: 'credentials',
+    username: 'your_username',
+    password: 'your_password',
+    domain: 'default',
+  },
+  baseUrl: 'https://api.your-broker.com/api',
+};
+```
+
+### Session Token Authentication
+
+```typescript
+const config = {
+  auth: {
+    type: 'session',
+    token: 'your-session-token',
+  },
+  baseUrl: 'https://api.your-broker.com/api',
+};
+```
+
+### Bearer Token Authentication
+
+```typescript
+const config = {
+  auth: {
+    type: 'bearer',
+    token: 'your-bearer-token',
+  },
+  baseUrl: 'https://api.your-broker.com/api',
+};
+```
+
+### HMAC Authentication
+
+```typescript
+const config = {
+  auth: {
+    type: 'hmac',
+    apiKey: 'your-api-key',
+    secret: 'your-secret',
+  },
+  baseUrl: 'https://api.your-broker.com/api',
+};
+```
+
+## 📊 DXTrade Real-time Streaming
+
+### Enhanced WebSocket Streaming
+
+The SDK provides a robust DXTrade WebSocket implementation with dual connections:
+
+```typescript
+// Create and start DXTrade stream manager
+const streamManager = await client.startDXTradeStream({
+  symbols: ['EUR/USD', 'GBP/USD', 'XAU/USD'],
+  account: 'default:dealtest',
+  enableMarketData: true,
+  enablePortfolio: true,
+  enablePingResponse: true, // Handle server ping requests automatically
+  autoReconnect: true,
+  maxReconnectAttempts: 5,
+}, {
+  // Market data callbacks
+  onMarketData: (data) => {
+    console.log(`Market Data: ${data.payload?.symbol} - ${data.payload?.bid}/${data.payload?.ask}`);
+  },
+  
+  // Portfolio callbacks
+  onAccountPortfolios: (portfolio) => {
+    console.log(`Portfolio: Balance=${portfolio.payload?.balance}, Equity=${portfolio.payload?.equity}`);
+  },
+  
+  onPositionUpdate: (position) => {
+    console.log(`Position: ${position.payload.symbol} - ${position.payload.size} units`);
+  },
+  
+  onOrderUpdate: (order) => {
+    console.log(`Order: ${order.payload.orderId} - ${order.payload.status}`);
+  },
+  
+  // Connection callbacks
+  onConnected: (connectionType) => {
+    console.log(`${connectionType} WebSocket connected successfully`);
+  },
+  
+  onPingRequest: (data) => {
+    console.log('Server ping handled automatically'); // SDK responds automatically
+  },
+  
+  onError: (connectionType, error) => {
+    console.error(`${connectionType} error:`, error.message);
+  },
+});
+
+// Monitor stream health
+const status = streamManager.getStatus();
+console.log('Stream Health:', {
+  ready: status.isReady,
+  marketData: status.marketData.connected,
+  portfolio: status.portfolio.connected,
+  totalMessages: status.marketData.messageCount + status.portfolio.messageCount,
+  pingRequestsHandled: status.pingStats.requestsReceived,
+});
+
+// Run stability test
+const testResult = await streamManager.runStabilityTest(300000); // 5 minutes
+console.log(`Stability test: ${testResult.success ? 'PASSED' : 'FAILED'}`);
+console.log(`Messages received: ${testResult.messageCount}, Pings handled: ${testResult.pingRequestsReceived}`);
+```
+
+### Stream Options
+
+```typescript
+interface DXTradeStreamOptions {
+  symbols?: string[];                 // Symbols to subscribe to
+  account?: string;                   // Trading account
+  enableMarketData?: boolean;         // Enable market data stream
+  enablePortfolio?: boolean;          // Enable portfolio stream
+  enablePingResponse?: boolean;       // Auto-respond to ping requests
+  autoReconnect?: boolean;            // Auto-reconnect on disconnect
+  maxReconnectAttempts?: number;      // Max reconnection attempts
+  reconnectDelay?: number;            // Delay between reconnect attempts
+  connectionTimeout?: number;         // Connection timeout
+}
+```
+
+### Stream Callbacks
+
+```typescript
+interface DXTradeStreamCallbacks {
+  onConnected?: (connectionType: 'marketData' | 'portfolio') => void;
+  onDisconnected?: (connectionType: 'marketData' | 'portfolio', code: number, reason: string) => void;
+  onError?: (connectionType: 'marketData' | 'portfolio', error: Error) => void;
+  onMarketData?: (data: MarketDataMessage) => void;
+  onAccountPortfolios?: (data: AccountPortfoliosMessage) => void;
+  onPositionUpdate?: (data: PositionUpdateMessage) => void;
+  onOrderUpdate?: (data: OrderUpdateMessage) => void;
+  onPingRequest?: (data: PingRequestMessage) => void;
+  onRawMessage?: (connectionType: 'marketData' | 'portfolio', data: any) => void;
+  onReconnecting?: (connectionType: 'marketData' | 'portfolio', attempt: number) => void;
+  onReconnected?: (connectionType: 'marketData' | 'portfolio') => void;
+}
+```
+
+### Built-in Stability Testing
+
+Run comprehensive stability tests like the original test implementation:
+
+```typescript
+// Quick test (30 seconds)
+const result = await client.runDXTradeStreamTest(30000, {
+  symbols: ['EUR/USD'],
+  enableMarketData: true,
+  enablePortfolio: false,
+});
+
+console.log('Test Results:', {
+  success: result.success,
+  duration: `${result.duration}s`,
+  messagesReceived: result.messageCount,
+  marketDataCount: result.marketDataCount,
+  pingRequestsHandled: result.pingRequestsReceived,
+  connectionStable: result.connectionStable,
 });
 ```
 
-#### HMAC Authentication
+### REST API Polling
+
+For brokers without WebSocket support:
+
 ```typescript
-const client = createDemoClient({
-  type: 'hmac',
-  apiKey: 'your-api-key',
-  secret: 'your-secret',
-});
+// Poll for market data
+setInterval(async () => {
+  const quotes = await client.marketData.getQuotes(['EURUSD']);
+  console.log('Latest quotes:', quotes);
+}, 2000);
 ```
 
-#### Session-based Authentication
+## 📚 API Reference
+
+### Client
+
+#### DXTradeClient
+
+Main SDK client for managing both REST and WebSocket connections.
+
 ```typescript
-const client = createDemoClient({
-  type: 'session',
-  token: 'your-session-token',
-});
+import { DXTradeClient, createConfigWithEnv } from 'dxtrade-sdk';
+
+const config = createConfigWithEnv();
+const client = new DXTradeClient(config);
 ```
 
-#### Credentials Authentication
-```typescript
-const client = createDemoClient({
-  type: 'credentials',
-  username: 'your-username',
-  password: 'your-password',
-  domain: 'your-domain',
-});
-```
+**Methods:**
+- `connect()`: Connect to DXTrade APIs
+- `disconnect()`: Disconnect from all APIs
+- `isReady()`: Check if client is ready for operations
+- `getStatus()`: Get comprehensive client status
+- `healthCheck()`: Perform health check on all services
+- `destroy()`: Cleanup all resources
 
-### Account Management
+**DXTrade WebSocket Methods:**
+- `createDXTradeStream(options?, callbacks?)`: Create DXTrade stream manager
+- `startDXTradeStream(options?, callbacks?)`: Create and connect stream manager
+- `runDXTradeStreamTest(duration?, options?, callbacks?)`: Run stability test
+
+### REST APIs
+
+#### AccountsApi
+
+Account management and balance information.
 
 ```typescript
 // Get all accounts
 const accounts = await client.accounts.getAccounts();
 
 // Get account balance
-const balance = await client.accounts.getAccountBalance('account-id');
+const balance = await client.accounts.getBalance(accountId);
 
-// Get account summary with metrics
-const summary = await client.accounts.getAccountSummary('account-id');
+// Get account summary
+const summary = await client.accounts.getSummary(accountId);
 
 // Get account history
-const history = await client.accounts.getAccountHistory({
-  type: 'TRADE',
-  fromDate: Date.now() - 86400000, // 24 hours ago
-  limit: 100,
+const history = await client.accounts.getHistory(accountId, {
+  startDate: '2024-01-01',
+  endDate: '2024-01-31',
 });
-
-// Calculate margin requirement
-const marginReq = await client.accounts.calculateMarginRequirement(
-  'account-id',
-  'EURUSD',
-  1.0,
-  'BUY'
-);
 ```
 
-### Instruments & Market Data
+#### InstrumentsApi
+
+Instrument metadata and market data.
 
 ```typescript
 // Get all instruments
-const instruments = await client.instruments.getInstruments({
-  type: 'FOREX',
-  tradable: true,
-});
+const instruments = await client.instruments.getInstruments();
 
-// Get instrument details
-const eurusd = await client.instruments.getInstrument('EURUSD');
+// Get specific instrument
+const instrument = await client.instruments.getInstrument('EUR/USD');
 
-// Get current quote
-const quote = await client.instruments.getQuote('EURUSD');
-
-// Get multiple quotes
-const quotes = await client.instruments.getQuotes(['EURUSD', 'GBPUSD', 'USDJPY']);
+// Get market hours
+const hours = await client.instruments.getMarketHours('EUR/USD');
 
 // Get historical data
-const history = await client.instruments.getHistoricalData('EURUSD', {
-  timeframe: 'H1',
-  fromDate: Date.now() - 86400000,
-  limit: 100,
+const history = await client.instruments.getHistoricalData('EUR/USD', {
+  timeframe: '1h',
+  startDate: '2024-01-01',
+  endDate: '2024-01-31',
 });
-
-// Check if market is open
-const marketStatus = await client.instruments.isMarketOpen('EURUSD');
 ```
 
-### Order Management
+#### OrdersApi
+
+Order management and execution.
 
 ```typescript
 // Place market order
-const marketOrder = await client.orders.placeOrder({
-  symbol: 'EURUSD',
+const order = await client.orders.placeOrder({
+  symbol: 'EUR/USD',
   side: 'BUY',
   type: 'MARKET',
-  quantity: 1.0,
+  quantity: 1000,
 });
 
 // Place limit order
 const limitOrder = await client.orders.placeOrder({
-  symbol: 'EURUSD',
-  side: 'BUY',
+  symbol: 'EUR/USD',
+  side: 'SELL',
   type: 'LIMIT',
-  quantity: 1.0,
+  quantity: 1000,
   price: 1.1000,
   timeInForce: 'GTC',
 });
 
-// Place stop order
-const stopOrder = await client.orders.placeOrder({
-  symbol: 'EURUSD',
-  side: 'SELL',
-  type: 'STOP',
-  quantity: 1.0,
-  stopPrice: 1.0900,
-});
-
-// Place OCO order (One-Cancels-Other)
-const ocoOrder = await client.orders.placeOcoOrder({
-  symbol: 'EURUSD',
-  side: 'BUY',
-  quantity: 1.0,
-  primaryOrder: {
-    type: 'LIMIT',
-    price: 1.0950,
-  },
-  secondaryOrder: {
-    type: 'STOP',
-    stopPrice: 1.0900,
-  },
-});
-
-// Place bracket order (Entry + Stop Loss + Take Profit)
-const bracketOrder = await client.orders.placeBracketOrder({
-  symbol: 'EURUSD',
-  side: 'BUY',
-  quantity: 1.0,
-  entryOrder: {
-    type: 'LIMIT',
-    price: 1.1000,
-  },
-  stopLoss: 1.0950,
-  takeProfit: 1.1100,
-});
-
 // Get orders
-const orders = await client.orders.getOrders({
-  symbol: 'EURUSD',
-  status: 'PENDING',
-});
+const orders = await client.orders.getOrders();
 
-// Modify order
-const modifiedOrder = await client.orders.modifyOrder({
-  orderId: 'order-id',
-  price: 1.1050,
-  quantity: 1.5,
-});
+// Get order by ID
+const orderInfo = await client.orders.getOrder(orderId);
 
 // Cancel order
-await client.orders.cancelOrder('order-id');
+await client.orders.cancelOrder(orderId);
 
-// Cancel all orders for symbol
-await client.orders.cancelAllOrders({
-  symbol: 'EURUSD',
+// Modify order
+const modified = await client.orders.modifyOrder(orderId, {
+  price: 1.1050,
+  quantity: 2000,
 });
 ```
 
-### Position Management
+#### PositionsApi
+
+Position management and monitoring.
 
 ```typescript
 // Get all positions
 const positions = await client.positions.getPositions();
 
-// Get positions for specific symbol
-const eurusdPositions = await client.positions.getPositionsBySymbol('EURUSD');
-
-// Get open positions only
-const openPositions = await client.positions.getOpenPositions();
-
-// Modify position (add stop loss/take profit)
-const modifiedPosition = await client.positions.modifyPosition({
-  positionId: 'position-id',
-  stopLoss: 1.0950,
-  takeProfit: 1.1100,
-});
-
-// Close position partially
-await client.positions.closePosition({
-  positionId: 'position-id',
-  quantity: 0.5, // Close half
-});
-
-// Close position completely
-await client.positions.closePosition({
-  positionId: 'position-id',
-});
-
-// Get position statistics
-const stats = await client.positions.getPositionStatistics('position-id');
-
-// Get position risk metrics
-const risk = await client.positions.getPositionRisk('position-id');
+// Get position by symbol
+const position = await client.positions.getPosition('EUR/USD');
 
 // Get portfolio summary
 const portfolio = await client.positions.getPortfolioSummary();
 
-// Calculate optimal position size
-const positionSize = await client.positions.calculatePositionSize(
-  'EURUSD',
-  100, // Risk $100
-  1.1000, // Entry price
-  1.0950  // Stop loss price
-);
+// Close position
+await client.positions.closePosition('EUR/USD');
+
+// Get position statistics
+const stats = await client.positions.getPositionStatistics('EUR/USD');
 ```
 
-### Real-time Data (WebSocket/Push API)
+### Types
+
+#### Authentication Types
 
 ```typescript
-// Subscribe to quotes
-client.push?.subscribeToQuotes(['EURUSD', 'GBPUSD']);
+// Credentials authentication
+type CredentialsAuth = {
+  type: 'credentials';
+  username: string;
+  password: string;
+  domain?: string;
+};
 
-client.push?.on('quote', (quote) => {
-  console.log(`${quote.symbol}: ${quote.bid}/${quote.ask} @ ${quote.timestamp}`);
-});
+// Session token authentication
+type SessionAuth = {
+  type: 'session';
+  token: string;
+};
 
-// Subscribe to order book
-client.push?.subscribeToOrderBook({
-  symbols: ['EURUSD'],
-  depth: 10,
-});
+// Bearer token authentication
+type BearerAuth = {
+  type: 'bearer';
+  token: string;
+};
 
-client.push?.on('orderbook', (orderBook) => {
-  console.log(`Order book for ${orderBook.symbol}:`);
-  console.log('Bids:', orderBook.bids.slice(0, 5));
-  console.log('Asks:', orderBook.asks.slice(0, 5));
-});
-
-// Subscribe to trades
-client.push?.subscribeToTrades(['EURUSD']);
-
-client.push?.on('trade', (trade) => {
-  console.log(`Trade: ${trade.symbol} ${trade.side} ${trade.quantity} @ ${trade.price}`);
-});
-
-// Subscribe to order updates
-client.push?.subscribeToOrders('account-id');
-
-client.push?.on('order', (orderUpdate) => {
-  console.log(`Order ${orderUpdate.id} status: ${orderUpdate.status}`);
-});
-
-// Subscribe to position updates
-client.push?.subscribeToPositions('account-id');
-
-client.push?.on('position', (positionUpdate) => {
-  console.log(`Position ${positionUpdate.symbol}: ${positionUpdate.unrealizedPnl}`);
-});
-
-// Subscribe to account updates
-client.push?.subscribeToAccount('account-id');
-
-client.push?.on('account', (accountUpdate) => {
-  console.log(`Account balance: ${accountUpdate.balance}, equity: ${accountUpdate.equity}`);
-});
+// HMAC authentication
+type HmacAuth = {
+  type: 'hmac';
+  apiKey: string;
+  secret: string;
+};
 ```
 
-## ⚙️ Configuration
-
-### Client Configuration
+#### Order Types
 
 ```typescript
-import { DXTradeClient } from 'dxtrade-sdk';
+interface OrderRequest {
+  symbol: string;
+  side: 'BUY' | 'SELL';
+  type: 'MARKET' | 'LIMIT' | 'STOP' | 'STOP_LIMIT';
+  quantity: number;
+  price?: number;
+  stopPrice?: number;
+  timeInForce?: 'GTC' | 'IOC' | 'FOK' | 'DAY';
+  clientOrderId?: string;
+}
 
-const client = new DXTradeClient({
-  environment: 'demo', // or 'live'
-  auth: {
-    type: 'bearer',
-    token: 'your-token',
-  },
-  baseUrl: 'https://custom-api.example.com/v1', // optional
-  timeout: 30000,
-  retries: 3,
-  rateLimit: {
-    requests: 100,
-    window: 60000, // 1 minute
-  },
-  websocket: {
-    heartbeatInterval: 30000,
-    reconnectDelay: 1000,
-    maxReconnectDelay: 30000,
-    maxReconnectAttempts: 5,
-    maxQueueSize: 1000,
-    enableBackfill: true,
-  },
-  enablePushAPI: true,
-});
+interface Order {
+  id: string;
+  clientOrderId?: string;
+  symbol: string;
+  side: 'BUY' | 'SELL';
+  type: 'MARKET' | 'LIMIT' | 'STOP' | 'STOP_LIMIT';
+  status: 'PENDING' | 'PARTIALLY_FILLED' | 'FILLED' | 'CANCELED' | 'REJECTED';
+  quantity: number;
+  filledQuantity: number;
+  remainingQuantity: number;
+  price?: number;
+  averagePrice?: number;
+  timestamp: number;
+  lastUpdate: number;
+}
+```
+
+#### Position Types
+
+```typescript
+interface Position {
+  symbol: string;
+  side: 'LONG' | 'SHORT';
+  size: number;
+  entryPrice: number;
+  markPrice: number;
+  unrealizedPnl: number;
+  realizedPnl: number;
+  timestamp: number;
+}
+```
+
+#### DXTrade Message Types
+
+```typescript
+// Market data message
+interface MarketDataMessage {
+  type: 'MarketData';
+  payload: {
+    symbol?: string;
+    bid?: number;
+    ask?: number;
+    last?: number;
+    volume?: number;
+    timestamp?: number;
+  };
+}
+
+// Account portfolio message
+interface AccountPortfoliosMessage {
+  type: 'AccountPortfolios';
+  payload: {
+    account?: string;
+    balance?: number;
+    equity?: number;
+    margin?: number;
+    freeMargin?: number;
+    positions?: Array<{
+      symbol: string;
+      quantity: number;
+      entryPrice?: number;
+      currentPrice?: number;
+      unrealizedPnl?: number;
+    }>;
+  };
+}
+
+// Ping request from server
+interface PingRequestMessage {
+  type: 'PingRequest';
+  timestamp: string;
+}
 ```
 
 ### Error Handling
 
+The SDK provides comprehensive error types:
+
 ```typescript
-import {
+import { 
+  DXError,
   NetworkError,
   AuthError,
   ValidationError,
-  TradingError,
   RateLimitError,
-  isRetryableError,
+  TradingError,
+  WebSocketError,
+  TimeoutError,
+  isRetryableError
 } from 'dxtrade-sdk';
 
 try {
   await client.orders.placeOrder(orderRequest);
 } catch (error) {
-  if (error instanceof TradingError) {
-    console.error('Trading error:', error.message);
-    console.error('Order ref:', error.orderRef);
-    console.error('Rejection reason:', error.rejectionReason);
+  if (error instanceof NetworkError) {
+    console.log('Network issue:', error.message);
+    // Retry logic
+  } else if (error instanceof AuthError) {
+    console.log('Authentication failed:', error.message);
+    // Re-authenticate
   } else if (error instanceof RateLimitError) {
-    console.error('Rate limited. Retry after:', error.retryAfter, 'ms');
+    console.log('Rate limited, retry after:', error.retryAfter);
+    // Wait and retry
   } else if (error instanceof ValidationError) {
-    console.error('Validation errors:', error.errors);
-  } else if (isRetryableError(error)) {
-    console.error('Retryable error:', error.message);
-    // Implement custom retry logic
+    console.log('Invalid request:', error.details);
+    // Fix request parameters
+  } else if (error instanceof TradingError) {
+    console.log('Trading error:', error.code, error.message);
+    // Handle trading-specific error
+  } else if (error instanceof WebSocketError) {
+    console.log('WebSocket error:', error.message);
+    // Handle connection issues
   }
 }
 ```
 
-### Advanced Features
+#### Error Properties
 
-#### Rate Limiting
+All errors extend `DXError` and include:
+
+- `name`: Error type name
+- `message`: Error description
+- `code`: Error code (when available)
+- `details`: Additional error details
+- `timestamp`: When the error occurred
+- `retryAfter`: For rate limit errors, seconds to wait
+
+#### Retryable Errors
+
+Use `isRetryableError(error)` to determine if an error should be retried:
+
 ```typescript
-// Check rate limit status
-const rateLimitStatus = client.http.getRateLimitStatus();
-console.log(`Rate limit: ${rateLimitStatus.remaining}/${rateLimitStatus.limit}`);
-console.log(`Reset time: ${new Date(rateLimitStatus.resetTime || 0)}`);
+try {
+  await client.orders.placeOrder(orderRequest);
+} catch (error) {
+  if (isRetryableError(error)) {
+    // Implement retry logic
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    // Retry the operation
+  } else {
+    // Handle non-retryable error
+    console.error('Operation failed:', error.message);
+  }
+}
 ```
 
-#### Clock Synchronization
-```typescript
-// Check clock sync status
-const clockStatus = client.http.getClockSyncStatus();
-console.log(`Clock offset: ${clockStatus.offset}ms`);
-console.log(`Last sync: ${new Date(clockStatus.lastSync)}`);
+## 🛠️ Advanced Features
 
-// Manual sync
-await client.http.syncClock();
+### Rate Limiting
+
+The SDK automatically handles rate limiting:
+
+```typescript
+const config = {
+  rateLimit: {
+    requests: 100,      // Max requests per window
+    window: 60000,      // Time window in ms
+  },
+};
 ```
 
-#### Health Monitoring
-```typescript
-// Comprehensive health check
-const health = await client.healthCheck();
-console.log('HTTP healthy:', health.http.healthy);
-console.log('WebSocket healthy:', health.websocket?.healthy);
-console.log('Overall healthy:', health.overall);
+### Connection Management
 
-// Get detailed status
-const status = client.getStatus();
-console.log('Client status:', status);
+Automatic reconnection with exponential backoff:
+
+```typescript
+client.on('reconnecting', (attempt) => {
+  console.log(`Reconnecting... Attempt ${attempt}`);
+});
+
+client.on('reconnected', () => {
+  console.log('Successfully reconnected');
+});
+```
+
+### Programmatic Configuration
+
+```typescript
+import { DXTradeClient } from 'dxtrade-sdk';
+
+const client = new DXTradeClient({
+  environment: 'demo',
+  auth: {
+    type: 'credentials',
+    username: 'your_username',
+    password: 'your_password',
+  },
+  baseUrl: 'https://your-broker.com/api',
+  urls: {
+    wsMarketData: 'wss://your-broker.com/ws/md?format=JSON',
+    wsPortfolio: 'wss://your-broker.com/ws/?format=JSON',
+  },
+  features: {
+    websocket: true,
+    clockSync: false,
+    autoReconnect: true,
+  },
+  rateLimit: {
+    requests: 100,
+    window: 60000,
+  },
+  timeout: 30000,
+  retries: 3,
+});
+```
+
+## 📝 Examples
+
+Check the `examples/` directory for complete examples:
+
+### Core Examples
+- `test-env-config.ts` - Environment configuration validation
+- `discover-endpoints.ts` - Automatic broker endpoint discovery
+- `test-data-reception.ts` - Comprehensive API testing
+
+### DXTrade WebSocket Examples  
+- `dxtrade-stream-example.ts` - **Full-featured DXTrade WebSocket streaming demo**
+- `test-dxtrade-stream.ts` - Quick validation test for WebSocket functionality
+- `test-websocket-5min.ts` - Original 5-minute stability test implementation
+
+### Running Examples
+
+```bash
+# Test your configuration
+npm run example:config
+
+# Discover broker endpoints
+npm run example:discover  
+
+# Test API data reception
+npm run example:data-reception
+
+# Run DXTrade WebSocket streaming demo
+npm run example:dxtrade-stream
+
+# Quick WebSocket validation
+npm run example:stream-test
+
+# Original 5-minute stability test
+npm run example:websocket-5min
 ```
 
 ## 🧪 Testing
 
-### Running Tests
-
 ```bash
-# Install dependencies
-npm install
-
-# Run all tests
+# Run tests
 npm test
 
-# Run with coverage
+# Run tests with coverage
 npm run test:coverage
 
-# Run specific test suite
-npm test -- --grep "HttpClient"
+# Run specific test
+npm test -- market-data
 
-# Run integration tests
-npm test src/test/integration/
+# Test your configuration
+npm run test:env-config
 
-# Run tests in watch mode
-npm test -- --watch
+# Test explicit URL configuration
+npm run test:explicit-urls
+
+# Test data reception
+npm run test:data-reception
 ```
 
-### Test Structure
+## Troubleshooting
 
-```
-src/test/
-├── unit/                 # Unit tests
-│   ├── http-client.test.ts
-│   ├── websocket-client.test.ts
-│   └── client.test.ts
-├── integration/          # Integration tests
-│   └── trading-workflow.test.ts
-└── mocks/               # Test utilities
-    └── mock-server.ts
-```
+### Common Issues
 
-## 🛠️ Development
+1. **Authentication Fails**
+   - Verify credentials are correct
+   - Check if domain needs to be specified
+   - Ensure the login endpoint path is correct
 
-### Project Structure
+2. **Market Data Not Available**
+   - Verify the account parameter is correct
+   - Check if market data endpoint requires different authentication
+   - Ensure symbols are in the correct format for your broker
 
-```
-dxtrade-sdk/
-├── src/
-│   ├── core/            # Core HTTP client and utilities
-│   ├── rest/            # REST API modules
-│   ├── websocket/       # WebSocket/Push API client
-│   ├── types/           # TypeScript type definitions
-│   ├── errors/          # Error classes and handling
-│   ├── utils/           # Utility functions
-│   └── test/            # Test files
-├── examples/            # Example applications
-├── docs/                # Documentation
-└── dist/                # Compiled output
-```
+3. **WebSocket Connection Fails**
+   - Check if broker supports WebSocket
+   - Verify WebSocket URL is correct
+   - Try different WebSocket paths (e.g., `/ws`, `/websocket`, `/stream`)
+   - Set `DXTRADE_FEATURE_WEBSOCKET=false` if not supported
 
-### Building
+4. **Clock Sync Errors**
+   - Check if broker supports time endpoint
+   - Set `DXTRADE_FEATURE_CLOCK_SYNC=false` if not supported
 
-```bash
-# Build the project
-npm run build
+5. **Rate Limiting**
+   - Reduce request frequency
+   - Adjust `DXTRADE_RATE_LIMIT_REQUESTS` and `DXTRADE_RATE_LIMIT_WINDOW`
 
-# Build and watch for changes
-npm run build:watch
+### Security Best Practices
 
-# Type checking only
-npx tsc --noEmit
-```
-
-### Code Quality
-
-```bash
-# Lint code
-npm run lint
-
-# Fix linting issues
-npm run lint:fix
-
-# Format code
-npm run format
-
-# Check formatting
-npm run format:check
-```
-
-## 📚 Examples
-
-### Basic Trading Bot
-
-```typescript
-import { createDemoClient } from 'dxtrade-sdk';
-
-const client = createDemoClient({
-  type: 'bearer',
-  token: process.env.DXTRADE_TOKEN!,
-});
-
-async function tradingBot() {
-  await client.connect();
-  
-  // Subscribe to real-time quotes
-  client.push?.subscribeToQuotes(['EURUSD']);
-  
-  let lastPrice = 0;
-  
-  client.push?.on('quote', async (quote) => {
-    if (quote.symbol !== 'EURUSD') return;
-    
-    const currentPrice = (quote.bid + quote.ask) / 2;
-    
-    // Simple momentum strategy
-    if (lastPrice > 0 && currentPrice > lastPrice * 1.001) {
-      try {
-        const order = await client.orders.placeOrder({
-          symbol: 'EURUSD',
-          side: 'BUY',
-          type: 'MARKET',
-          quantity: 0.1,
-          stopLoss: currentPrice * 0.999,
-          takeProfit: currentPrice * 1.002,
-        });
-        
-        console.log('Buy order placed:', order.id);
-      } catch (error) {
-        console.error('Failed to place order:', error);
-      }
-    }
-    
-    lastPrice = currentPrice;
-  });
-}
-
-tradingBot().catch(console.error);
-```
-
-### Portfolio Monitor
-
-```typescript
-import { createLiveClient } from 'dxtrade-sdk';
-
-const client = createLiveClient({
-  type: 'hmac',
-  apiKey: process.env.DXTRADE_API_KEY!,
-  secret: process.env.DXTRADE_SECRET!,
-});
-
-async function portfolioMonitor() {
-  await client.connect();
-  
-  // Get initial portfolio state
-  const summary = await client.positions.getPortfolioSummary();
-  console.log('Initial portfolio:', summary);
-  
-  // Subscribe to position updates
-  client.push?.subscribeToPositions();
-  
-  client.push?.on('position', (position) => {
-    console.log(`Position update: ${position.symbol} PnL: ${position.unrealizedPnl}`);
-  });
-  
-  // Subscribe to account updates
-  client.push?.subscribeToAccount();
-  
-  client.push?.on('account', (account) => {
-    console.log(`Account update: Balance: ${account.balance}, Equity: ${account.equity}`);
-  });
-  
-  // Periodic portfolio reporting
-  setInterval(async () => {
-    try {
-      const currentSummary = await client.positions.getPortfolioSummary();
-      console.log('Portfolio summary:', currentSummary);
-    } catch (error) {
-      console.error('Failed to get portfolio summary:', error);
-    }
-  }, 60000); // Every minute
-}
-
-portfolioMonitor().catch(console.error);
-```
+1. **Never commit credentials** - Use environment variables or secure vaults
+2. **Use separate credentials** for development and production
+3. **Rotate API keys regularly** if using HMAC authentication
+4. **Limit API permissions** to only what's needed
+5. **Use secure storage** for environment variables in production
+6. **Enable SSL/TLS** for all connections
+7. **Monitor API usage** for unusual activity
+8. **Implement proper error handling** to avoid exposing sensitive information
 
 ## 🤝 Contributing
 
-We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
-
-### Development Setup
-
-1. Clone the repository:
-```bash
-git clone https://github.com/your-org/dxtrade-sdk.git
-cd dxtrade-sdk
-```
-
-2. Install dependencies:
-```bash
-npm install
-```
-
-3. Run tests:
-```bash
-npm test
-```
-
-4. Build the project:
-```bash
-npm run build
-```
+Contributions are welcome! Please read our [Contributing Guide](CONTRIBUTING.md) for details.
 
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 🆘 Support
+## 🔗 Resources
 
-- 📧 **Email**: [support@your-org.com](mailto:support@your-org.com)
-- 💬 **Discussions**: [GitHub Discussions](https://github.com/your-org/dxtrade-sdk/discussions)
-- 🐛 **Issues**: [GitHub Issues](https://github.com/your-org/dxtrade-sdk/issues)
-- 📚 **Documentation**: [Full API Documentation](https://docs.your-org.com/dxtrade-sdk)
+- [DXtrade Documentation](https://dx.trade/api-docs)
+- [TypeScript Documentation](https://www.typescriptlang.org/docs/)
+- [Node.js Documentation](https://nodejs.org/docs/)
 
-## 🔄 Changelog
+## ⚠️ Disclaimer
 
-See [CHANGELOG.md](CHANGELOG.md) for a detailed list of changes.
-
----
-
-**Made with ❤️ for the DXtrade trading community**
+This SDK is provided as-is for integration with DXtrade platforms. Trading involves risk. Always test thoroughly in demo environments before using in production.
