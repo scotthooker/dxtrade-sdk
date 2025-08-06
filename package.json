@@ -1,0 +1,77 @@
+{
+  "name": "dxtrade-sdk",
+  "version": "1.0.0",
+  "description": "Production-ready TypeScript SDK for DXtrade REST and WebSocket APIs",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./rest": {
+      "import": "./dist/rest/index.js",
+      "types": "./dist/rest/index.d.ts"
+    },
+    "./websocket": {
+      "import": "./dist/websocket/index.js",
+      "types": "./dist/websocket/index.d.ts"
+    }
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "scripts": {
+    "build": "tsc",
+    "build:watch": "tsc --watch",
+    "dev": "tsx --watch src/index.ts",
+    "test": "vitest",
+    "test:coverage": "vitest --coverage",
+    "test:ui": "vitest --ui",
+    "lint": "eslint src --ext .ts,.tsx",
+    "lint:fix": "eslint src --ext .ts,.tsx --fix",
+    "format": "prettier --write src/**/*.{ts,tsx}",
+    "format:check": "prettier --check src/**/*.{ts,tsx}",
+    "docs": "typedoc src/index.ts",
+    "docs:serve": "typedoc src/index.ts --watch",
+    "prepublishOnly": "npm run lint && npm run test && npm run build"
+  },
+  "keywords": [
+    "dxtrade",
+    "trading",
+    "websocket",
+    "rest-api",
+    "typescript",
+    "sdk",
+    "financial"
+  ],
+  "author": "DXtrade SDK Team",
+  "license": "MIT",
+  "dependencies": {
+    "ws": "^8.18.0",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.17",
+    "@types/ws": "^8.5.10",
+    "@typescript-eslint/eslint-plugin": "^6.21.0",
+    "@typescript-eslint/parser": "^6.21.0",
+    "@vitest/coverage-v8": "^1.2.2",
+    "@vitest/ui": "^1.2.2",
+    "eslint": "^8.56.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-prettier": "^5.1.3",
+    "prettier": "^3.2.5",
+    "tsx": "^4.7.1",
+    "typedoc": "^0.25.8",
+    "typescript": "^5.3.3",
+    "vite": "^5.1.4",
+    "vitest": "^1.2.2"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ]
+}

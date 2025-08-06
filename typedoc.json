@@ -1,0 +1,58 @@
+{
+  "entryPoints": ["src/index.ts"],
+  "out": "docs",
+  "theme": "default",
+  "name": "DXtrade TypeScript SDK",
+  "includeVersion": true,
+  "excludeExternals": true,
+  "excludePrivate": true,
+  "excludeProtected": true,
+  "categorizeByGroup": false,
+  "defaultCategory": "API",
+  "categoryOrder": [
+    "Client",
+    "REST API",
+    "WebSocket API",
+    "Types",
+    "Errors",
+    "Utilities",
+    "*"
+  ],
+  "sort": ["source-order"],
+  "kindSortOrder": [
+    "Document",
+    "Project",
+    "Module",
+    "Namespace",
+    "Enum",
+    "EnumMember",
+    "Class",
+    "Interface",
+    "TypeAlias",
+    "Constructor",
+    "Property",
+    "Method",
+    "Function",
+    "Accessor",
+    "Variable"
+  ],
+  "visibilityFilters": {
+    "protected": false,
+    "private": false,
+    "inherited": true,
+    "external": false
+  },
+  "searchInComments": true,
+  "cleanOutputDir": true,
+  "titleLink": "https://github.com/your-org/dxtrade-sdk",
+  "navigationLinks": {
+    "GitHub": "https://github.com/your-org/dxtrade-sdk",
+    "NPM": "https://www.npmjs.com/package/dxtrade-sdk"
+  },
+  "sidebarLinks": {
+    "Examples": "https://github.com/your-org/dxtrade-sdk/tree/main/examples",
+    "Issues": "https://github.com/your-org/dxtrade-sdk/issues"
+  },
+  "plugin": ["typedoc-plugin-markdown"],
+  "readme": "README.md"
+}
